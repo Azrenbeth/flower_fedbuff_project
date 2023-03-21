@@ -47,7 +47,9 @@ class Strategy(ABC):
     @abstractmethod
     def configure_fit(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
-    ) -> List[Tuple[ClientProxy, FitIns]]:
+    ) -> Union[
+        Tuple[int, List[Tuple[ClientProxy, FitIns]]], List[Tuple[ClientProxy, FitIns]]
+    ]:
         """Configure the next round of training.
 
         Parameters
@@ -61,6 +63,10 @@ class Strategy(ABC):
 
         Returns
         -------
+        (TODO: make this docstring nice :))
+        K, fit_configuration OR fit_configuration
+        K : int
+            The number of updates to buffer before server round finishes
         fit_configuration : List[Tuple[ClientProxy, FitIns]]
             A list of tuples. Each tuple in the list identifies a `ClientProxy` and the
             `FitIns` for this particular `ClientProxy`. If a particular `ClientProxy`
