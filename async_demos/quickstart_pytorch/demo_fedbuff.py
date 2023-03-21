@@ -75,6 +75,7 @@ class FedBuff(Strategy):
         evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         concurrency=5,
         K=3,
+        staleness_fn: Optional[Callable[int, float]] = None,
     ) -> None:
         """Federated Averaging strategy.
 
@@ -132,10 +133,16 @@ class FedBuff(Strategy):
         self.fit_metrics_aggregation_fn = fit_metrics_aggregation_fn
         self.evaluate_metrics_aggregation_fn = evaluate_metrics_aggregation_fn
 
-        self.rounds_completed = 0
         self.busy_clients = {}  # dict from cid to server round
         self.concurrency = concurrency
         self.K = K
+
+        # How much to scale gradients by when update is x rounds old
+        # Can be used to prioritise more up to date clients and ignore old ones
+        if staleness_fn is None:
+            self.staleness_fn = lambda x: 1.0
+        else:
+            self.staleness_fn = staleness_fn
 
     def __repr__(self) -> str:
         rep = f"FedAvg(accept_failures={self.accept_failures})"
@@ -187,6 +194,9 @@ class FedBuff(Strategy):
             config = self.on_fit_config_fn(server_round)
         fit_ins = FitIns(parameters, config)
 
+        # Save so can work out gradients
+        self.current_params_ndarray = parameters_to_ndarrays(parameters)
+
         print("Working out which clients to instruct")
 
         # Sample clients
@@ -195,8 +205,9 @@ class FedBuff(Strategy):
         )
         print(f"Want {sample_size} more clients, minimum {min_num_clients}")
 
+        print(f"Busy clients: {self.busy_clients}")
+
         occupied_clients = self.busy_clients.keys()
-        print(f"Occupied clients: {occupied_clients}")
 
         class NotBusyCriterion(Criterion):
             """Criterion to select only non busy clients."""
@@ -263,7 +274,12 @@ class FedBuff(Strategy):
         ## Split off IDs from results and failures
         success_cids = [res[0] for res in results]
         results = [res[1] for res in results]
-        print(f"These clients sent updates: {success_cids}")
+        # How many rounds off each result is
+        staleness = [server_round - self.busy_clients[c] for c in success_cids]
+
+        print(
+            f"These clients sent updates: {[(id,age) for id,age in zip(success_cids,staleness)]}"
+        )
         for c in success_cids:
             self.busy_clients.pop(c)
 
@@ -273,12 +289,33 @@ class FedBuff(Strategy):
         for c in fail_cids:
             self.busy_clients.pop(c)
 
-        # Convert results
-        weights_results = [
-            (parameters_to_ndarrays(fit_res.parameters), fit_res.num_examples)
-            for _, fit_res in results
+        # Convert results to list of (delta,weight) tuples
+        deltas_results = [
+            (
+                # Need to do each layer separately as may be different sizes
+                [
+                    new_layer_params - current_layer_params
+                    for new_layer_params, current_layer_params in zip(
+                        parameters_to_ndarrays(fit_res.parameters),
+                        self.current_params_ndarray,
+                    )
+                ],
+                # Weight by num_examples scaled according to staleness
+                self.staleness_fn(age) * fit_res.num_examples,
+            )
+            for age, (_, fit_res) in zip(staleness, results)
         ]
-        parameters_aggregated = ndarrays_to_parameters(aggregate(weights_results))
+
+        # Need to add each layer delta seperately
+        self.current_params_ndarray = [
+            layer_delta + current_layer_params
+            for layer_delta, current_layer_params in zip(
+                aggregate(deltas_results),
+                self.current_params_ndarray,
+            )
+        ]
+
+        parameters_aggregated = ndarrays_to_parameters(self.current_params_ndarray)
 
         # Aggregate custom metrics if aggregation fn was provided
         metrics_aggregated = {}
