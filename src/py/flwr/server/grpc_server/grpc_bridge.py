@@ -130,7 +130,9 @@ class GrpcBridge:
             self._raise_if_closed()
 
             if self._status != Status.AWAITING_INS_WRAPPER:
-                raise Exception("This should not happen")
+                raise Exception(
+                    f"Client is busy: GRPC request made while status is {self._status} (should be {Status.AWAITING_INS_WRAPPER})"
+                )
 
             self._ins_wrapper = ins_wrapper  # Write
             self._transition(Status.INS_WRAPPER_AVAILABLE)
