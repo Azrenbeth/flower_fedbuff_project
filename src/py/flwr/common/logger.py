@@ -17,14 +17,19 @@ import logging
 from logging import LogRecord
 from logging.handlers import HTTPHandler
 from typing import Any, Dict, Optional, Tuple
+import os
 
 # Create logger
 LOGGER_NAME = "flwr"
 FLOWER_LOGGER = logging.getLogger(LOGGER_NAME)
 FLOWER_LOGGER.setLevel(logging.DEBUG)
 
+pid = os.getpid()
+
+logging.Formatter("%(ip)s %(message)s", defaults={"ip": None})
 DEFAULT_FORMATTER = logging.Formatter(
-    "%(levelname)s %(name)s %(asctime)s | %(filename)s:%(lineno)d | %(message)s"
+    "%(pid)s %(levelname)s %(name)s %(asctime)s | %(filename)s:%(lineno)d | %(message)s",
+    defaults={"pid": pid},
 )
 
 # Configure console logger
