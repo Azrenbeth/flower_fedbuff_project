@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import flwr as fl
 from flwr.common import Metrics
-from flwr.server.strategy.demo_fedbuff import FedBuff
+from flwr.server.strategy.fedbuff import FedBuff
 
 
 # Define metric aggregation function

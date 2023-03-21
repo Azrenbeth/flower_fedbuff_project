@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, Callable, Optional, Tuple, List
 from dataset_utils import get_cifar_10, do_fl_partitioning, get_dataloader
 from utils import Net, train, test
-from flwr.server.strategy.demo_fedbuff import FedBuff
+from flwr.server.strategy.fedbuff import FedBuff
 
 parser = argparse.ArgumentParser(description="Flower Simulation with PyTorch")
 

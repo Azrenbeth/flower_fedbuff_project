@@ -62,9 +62,11 @@ class FedBuff(Strategy):
         buffer_size: int = 3,
         staleness_fn: Optional[Callable[int, float]] = None,
     ) -> None:
-        """Federated Averaging strategy.
+        """Federated Buffering asynchronous aggregation strategy.
 
-        Implementation based on https://arxiv.org/abs/1602.05629
+        NOTE: requires server to be in asynchronous mode
+
+        Implementation based on https://arxiv.org/abs/2106.06639
 
         Parameters
         ----------
