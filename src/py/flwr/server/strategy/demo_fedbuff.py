@@ -205,8 +205,6 @@ class FedBuff(Strategy):
         )
         print(f"Want {sample_size} more clients, minimum {min_num_clients}")
 
-        print(f"Busy clients: {self.busy_clients}")
-
         occupied_clients = self.busy_clients.keys()
 
         class NotBusyCriterion(Criterion):
@@ -214,7 +212,6 @@ class FedBuff(Strategy):
 
             def select(self, client: ClientProxy) -> bool:
                 is_not_busy = True if client.cid not in occupied_clients else False
-                print(f"{client.cid}: {is_not_busy}")
                 return is_not_busy
 
         clients = client_manager.sample(
@@ -227,7 +224,7 @@ class FedBuff(Strategy):
         self.busy_clients.update({c.cid: server_round for c in clients})
 
         # Return client/config pairs
-        return 3, [(client, fit_ins) for client in clients]
+        return self.K, [(client, fit_ins) for client in clients]
 
     def configure_evaluate(
         self, server_round: int, parameters: Parameters, client_manager: ClientManager

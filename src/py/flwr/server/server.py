@@ -153,7 +153,8 @@ class Server:
                         server_round=current_round, metrics=evaluate_metrics_fed
                     )
 
-        executor.shutdown()
+        executor.shutdown(wait=False)
+
         # Bookkeeping
         end_time = timeit.default_timer()
         elapsed = end_time - start_time
@@ -360,8 +361,8 @@ def fit_clients_async(
         for client_proxy, ins in client_instructions
     }
     pending_fs.update(submitted_fs)
-    print(submitted_fs)
-    print(pending_fs)
+    # print(submitted_fs)
+    # print(pending_fs)
 
     finished_fs_it = concurrent.futures.as_completed(
         fs=pending_fs.keys(),
@@ -374,12 +375,12 @@ def fit_clients_async(
         _handle_finished_future_after_fit_async(
             future=future, results=results, failures=failures, cid=finished_cid
         )
-        print(f"Finished future: {future}")
+        print(f"Client finshed: {finished_cid}")
         pending_fs.pop(future)
         if len(results) >= K:
             break
 
-    print(failures)
+    # print(failures)
 
     log(
         DEBUG,

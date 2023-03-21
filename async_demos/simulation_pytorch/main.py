@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, Callable, Optional, Tuple, List
 from dataset_utils import get_cifar_10, do_fl_partitioning, get_dataloader
 from utils import Net, train, test
-
+from flwr.server.strategy.demo_fedbuff import FedBuff
 
 parser = argparse.ArgumentParser(description="Flower Simulation with PyTorch")
 
@@ -154,12 +154,20 @@ if __name__ == "__main__":
     )
 
     # configure the strategy
-    strategy = fl.server.strategy.FedAvg(
-        fraction_fit=0.1,
-        fraction_evaluate=0.1,
-        min_fit_clients=10,
-        min_evaluate_clients=10,
-        min_available_clients=pool_size,  # All clients should be available
+
+    # strategy = fl.server.strategy.FedAvg(
+    #     fraction_fit=0.1,
+    #     fraction_evaluate=0.1,
+    #     min_fit_clients=10,
+    #     min_evaluate_clients=10,
+    #     min_available_clients=pool_size,  # All clients should be available
+    #     on_fit_config_fn=fit_config,
+    #     evaluate_fn=get_evaluate_fn(testset),  # centralised evaluation of global model
+    # )
+
+    strategy = FedBuff(
+        concurrency=20,
+        K=10,
         on_fit_config_fn=fit_config,
         evaluate_fn=get_evaluate_fn(testset),  # centralised evaluation of global model
     )
@@ -180,3 +188,24 @@ if __name__ == "__main__":
         strategy=strategy,
         ray_init_args=ray_init_args,
     )
+
+
+# Annoyingly everything hangs waiting for final client raylets to end
+# using executor.shutdown() and ray.shutdown() don't prevent hanging
+
+import signal, psutil, os, time
+
+
+def kill_child_processes(parent_pid, sig=signal.SIGTERM):
+    print("Killing all child processess")
+    try:
+        parent = psutil.Process(parent_pid)
+    except psutil.NoSuchProcess:
+        return
+    children = parent.children(recursive=True)
+    print(f"num of children: {len(children)}")
+    for process in children:
+        process.send_signal(sig)
+
+
+kill_child_processes(os.getpid())
