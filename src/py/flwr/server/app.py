@@ -63,6 +63,7 @@ class ServerConfig:
 
     num_rounds: int = 1
     round_timeout: Optional[float] = None
+    asynchronous: bool = False
 
 
 def start_server(  # pylint: disable=too-many-arguments
@@ -86,8 +87,9 @@ def start_server(  # pylint: disable=too-many-arguments
         thereof. If no instance is provided, then `start_server` will create
         one.
     config : Optional[ServerConfig] (default: None)
-        Currently supported values are `num_rounds` (int, default: 1) and
-        `round_timeout` in seconds (float, default: None).
+        Currently supported values are `num_rounds` (int, default: 1),
+        `round_timeout` in seconds (float, default: None) and `asynchronous`
+        (bool, default: False).
     strategy : Optional[flwr.server.Strategy] (default: None).
         An implementation of the abstract base class
         `flwr.server.strategy.Strategy`. If no strategy is provided, then
@@ -183,19 +185,30 @@ def _init_defaults(
     strategy: Optional[Strategy],
     client_manager: Optional[ClientManager],
 ) -> Tuple[Server, ServerConfig]:
+
+    # Set default config values
+    if config is None:
+        config = ServerConfig()
+
     # Create server instance if none was given
     if server is None:
         if client_manager is None:
             client_manager = SimpleClientManager()
         if strategy is None:
             strategy = FedAvg()
-        server = Server(client_manager=client_manager, strategy=strategy)
+        server = Server(
+            client_manager=client_manager,
+            strategy=strategy,
+            asynchronous=config.asynchronous,
+        )
     elif strategy is not None:
         log(WARN, "Both server and strategy were provided, ignoring strategy")
 
-    # Set default config values
-    if config is None:
-        config = ServerConfig()
+    if config.asynchronous != server.asynchronous:
+        log(
+            WARN,
+            "Config and server disagree on whether server should be asynchronous, ignoring config",
+        )
 
     return server, config
 
