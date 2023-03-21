@@ -40,6 +40,7 @@ from flwr.server.criterion import Criterion
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 from flwr.server.strategy.strategy import Strategy
 
+
 # flake8: noqa: E501
 class FedBuff(Strategy):
     """Configurable FedAvg strategy implementation."""
@@ -58,8 +59,8 @@ class FedBuff(Strategy):
         accept_failures: bool = True,
         initial_parameters: Optional[Parameters] = None,
         fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
-        concurrency: int = 5,
-        buffer_size: int = 3,
+        concurrency: int = 3,
+        buffer_size: int = 2,
         staleness_fn: Optional[Callable[int, float]] = None,
     ) -> None:
         """Federated Buffering asynchronous aggregation strategy.

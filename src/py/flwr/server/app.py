@@ -43,7 +43,7 @@ from flwr.server.history import History
 from flwr.server.rest_server.rest_api import app as fast_api_app
 from flwr.server.server import Server
 from flwr.server.state import StateFactory
-from flwr.server.strategy import FedAvg, Strategy
+from flwr.server.strategy import FedAvg, FedBuff, Strategy
 
 ADDRESS_DRIVER_API = "0.0.0.0:9091"
 ADDRESS_FLEET_API_GRPC_RERE = "0.0.0.0:9092"
@@ -195,7 +195,10 @@ def _init_defaults(
         if client_manager is None:
             client_manager = SimpleClientManager()
         if strategy is None:
-            strategy = FedAvg()
+            if config.asynchronous:
+                strategy = FedBuff()
+            else:
+                strategy = FedAvg()
         server = Server(
             client_manager=client_manager,
             strategy=strategy,
