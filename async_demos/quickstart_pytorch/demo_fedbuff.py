@@ -36,7 +36,7 @@ from flwr.common import (
 from flwr.common.logger import log
 from flwr.server.client_manager import ClientManager
 from flwr.server.client_proxy import ClientProxy
-
+from flwr.server.criterion import Criterion
 from flwr.server.strategy.aggregate import aggregate, weighted_loss_avg
 from flwr.server.strategy.strategy import Strategy
 
@@ -73,6 +73,8 @@ class FedBuff(Strategy):
         initial_parameters: Optional[Parameters] = None,
         fit_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
         evaluate_metrics_aggregation_fn: Optional[MetricsAggregationFn] = None,
+        concurrency=5,
+        K=3,
     ) -> None:
         """Federated Averaging strategy.
 
@@ -130,6 +132,11 @@ class FedBuff(Strategy):
         self.fit_metrics_aggregation_fn = fit_metrics_aggregation_fn
         self.evaluate_metrics_aggregation_fn = evaluate_metrics_aggregation_fn
 
+        self.rounds_completed = 0
+        self.busy_clients = {}  # dict from cid to server round
+        self.concurrency = concurrency
+        self.K = K
+
     def __repr__(self) -> str:
         rep = f"FedAvg(accept_failures={self.accept_failures})"
         return rep
@@ -137,8 +144,11 @@ class FedBuff(Strategy):
     def num_fit_clients(self, num_available_clients: int) -> Tuple[int, int]:
         """Return the sample size and the required number of available
         clients."""
-        num_clients = int(num_available_clients * self.fraction_fit)
-        return max(num_clients, self.min_fit_clients), self.min_available_clients
+        num_additional_clients = self.concurrency - len(self.busy_clients)
+        return num_additional_clients, num_additional_clients
+
+        # num_clients = int(num_available_clients * self.fraction_fit)
+        # return max(num_clients, self.min_fit_clients), self.min_available_clients
 
     def num_evaluation_clients(self, num_available_clients: int) -> Tuple[int, int]:
         """Use a fraction of available clients for evaluation."""
@@ -177,13 +187,33 @@ class FedBuff(Strategy):
             config = self.on_fit_config_fn(server_round)
         fit_ins = FitIns(parameters, config)
 
+        print("Working out which clients to instruct")
+
         # Sample clients
         sample_size, min_num_clients = self.num_fit_clients(
             client_manager.num_available()
         )
+        print(f"Want {sample_size} more clients, minimum {min_num_clients}")
+
+        occupied_clients = self.busy_clients.keys()
+        print(f"Occupied clients: {occupied_clients}")
+
+        class NotBusyCriterion(Criterion):
+            """Criterion to select only non busy clients."""
+
+            def select(self, client: ClientProxy) -> bool:
+                is_not_busy = True if client.cid not in occupied_clients else False
+                print(f"{client.cid}: {is_not_busy}")
+                return is_not_busy
+
         clients = client_manager.sample(
-            num_clients=sample_size, min_num_clients=min_num_clients
+            num_clients=sample_size,
+            min_num_clients=min_num_clients,
+            criterion=NotBusyCriterion(),
         )
+        print(f"Selected clients = {[c.cid for c in clients]}")
+
+        self.busy_clients.update({c.cid: server_round for c in clients})
 
         # Return client/config pairs
         return 3, [(client, fit_ins) for client in clients]
@@ -192,27 +222,30 @@ class FedBuff(Strategy):
         self, server_round: int, parameters: Parameters, client_manager: ClientManager
     ) -> List[Tuple[ClientProxy, EvaluateIns]]:
         """Configure the next round of evaluation."""
-        # Do not configure federated evaluation if fraction eval is 0.
-        if self.fraction_evaluate == 0.0:
-            return []
+        # No federated evaluation
+        return []
 
-        # Parameters and config
-        config = {}
-        if self.on_evaluate_config_fn is not None:
-            # Custom evaluation config function provided
-            config = self.on_evaluate_config_fn(server_round)
-        evaluate_ins = EvaluateIns(parameters, config)
+        # # Do not configure federated evaluation if fraction eval is 0.
+        # if self.fraction_evaluate == 0.0:
+        #     return []
 
-        # Sample clients
-        sample_size, min_num_clients = self.num_evaluation_clients(
-            client_manager.num_available()
-        )
-        clients = client_manager.sample(
-            num_clients=sample_size, min_num_clients=min_num_clients
-        )
+        # # Parameters and config
+        # config = {}
+        # if self.on_evaluate_config_fn is not None:
+        #     # Custom evaluation config function provided
+        #     config = self.on_evaluate_config_fn(server_round)
+        # evaluate_ins = EvaluateIns(parameters, config)
 
-        # Return client/config pairs
-        return [(client, evaluate_ins) for client in clients]
+        # # Sample clients
+        # sample_size, min_num_clients = self.num_evaluation_clients(
+        #     client_manager.num_available()
+        # )
+        # clients = client_manager.sample(
+        #     num_clients=sample_size, min_num_clients=min_num_clients
+        # )
+
+        # # Return client/config pairs
+        # return [(client, evaluate_ins) for client in clients]
 
     def aggregate_fit(
         self,
@@ -229,12 +262,16 @@ class FedBuff(Strategy):
 
         ## Split off IDs from results and failures
         success_cids = [res[0] for res in results]
-        print(f"These clients sent updates: {success_cids}")
         results = [res[1] for res in results]
+        print(f"These clients sent updates: {success_cids}")
+        for c in success_cids:
+            self.busy_clients.pop(c)
 
         fail_cids = [fail[0] for fail in failures]
-        print(f"These clients failed: {fail_cids}")
         failures = [fail[1] for fail in failures]
+        print(f"These clients failed: {fail_cids}")
+        for c in fail_cids:
+            self.busy_clients.pop(c)
 
         # Convert results
         weights_results = [
