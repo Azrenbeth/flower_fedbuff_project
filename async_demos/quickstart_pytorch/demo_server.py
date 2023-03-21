@@ -2,7 +2,7 @@ from typing import List, Tuple
 
 import flwr as fl
 from flwr.common import Metrics
-from demo_fedavg import FedAvg
+from demo_fedbuff import FedBuff
 
 
 # Define metric aggregation function
@@ -16,7 +16,7 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 
 # Define strategy
-strategy = FedAvg(
+strategy = FedBuff(
     # evaluate_metrics_aggregation_fn=weighted_average,
     min_fit_clients=5,
     min_available_clients=5,

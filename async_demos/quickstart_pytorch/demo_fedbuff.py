@@ -49,7 +49,7 @@ than or equal to the values of `min_fit_clients` and `min_evaluate_clients`.
 
 
 # flake8: noqa: E501
-class FedAvg(Strategy):
+class FedBuff(Strategy):
     """Configurable FedAvg strategy implementation."""
 
     # pylint: disable=too-many-arguments,too-many-instance-attributes,line-too-long
