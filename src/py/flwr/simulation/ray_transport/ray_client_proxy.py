@@ -115,7 +115,7 @@ class RayClientProxy(ClientProxy):
         return common.DisconnectRes(reason="")  # Nothing to do here (yet)
 
 
-@ray.remote
+@ray.remote(max_calls=1)
 def launch_and_get_properties(
     client_fn: ClientFn, cid: str, get_properties_ins: common.GetPropertiesIns
 ) -> common.GetPropertiesRes:
@@ -127,7 +127,7 @@ def launch_and_get_properties(
     )
 
 
-@ray.remote
+@ray.remote(max_calls=1)
 def launch_and_get_parameters(
     client_fn: ClientFn, cid: str, get_parameters_ins: common.GetParametersIns
 ) -> common.GetParametersRes:
@@ -139,7 +139,7 @@ def launch_and_get_parameters(
     )
 
 
-@ray.remote
+@ray.remote(max_calls=1)
 def launch_and_fit(
     client_fn: ClientFn, cid: str, fit_ins: common.FitIns
 ) -> common.FitRes:
@@ -151,7 +151,7 @@ def launch_and_fit(
     )
 
 
-@ray.remote
+@ray.remote(max_calls=1)
 def launch_and_evaluate(
     client_fn: ClientFn, cid: str, evaluate_ins: common.EvaluateIns
 ) -> common.EvaluateRes:
