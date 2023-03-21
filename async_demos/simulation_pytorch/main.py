@@ -167,7 +167,7 @@ if __name__ == "__main__":
 
     strategy = FedBuff(
         concurrency=20,
-        K=10,
+        buffer_size=10,
         on_fit_config_fn=fit_config,
         evaluate_fn=get_evaluate_fn(testset),  # centralised evaluation of global model
     )

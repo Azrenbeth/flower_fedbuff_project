@@ -17,12 +17,8 @@ def weighted_average(metrics: List[Tuple[int, Metrics]]) -> Metrics:
 
 # Define strategy
 strategy = FedBuff(
-    # evaluate_metrics_aggregation_fn=weighted_average,
-    # min_fit_clients=5,
-    # min_available_clients=5,
-    # fraction_evaluate=0.0,
     concurrency=5,
-    K=3,
+    buffer_size=3,
 )
 
 # Start Flower server

@@ -222,7 +222,7 @@ class Server:
         """Perform a single round of federated averaging."""
 
         # Get clients and their respective instructions from strategy
-        K, client_instructions = self.strategy.configure_fit(
+        buffer_size, client_instructions = self.strategy.configure_fit(
             server_round=server_round,
             parameters=self.parameters,
             client_manager=self._client_manager,
@@ -246,7 +246,7 @@ class Server:
             timeout=timeout,
             executor=executor,
             pending_fs=pending_fs,
-            K=K,
+            buffer_size=buffer_size,
         )
         log(
             DEBUG,
@@ -345,7 +345,7 @@ def fit_clients_async(
     timeout: Optional[float],
     executor: concurrent.futures.ThreadPoolExecutor,
     pending_fs: Dict[concurrent.futures.Future, str],
-    K: int,
+    buffer_size: int,
 ) -> AsyncFitResultsAndFailures:
     """Refine parameters concurrently on all selected clients."""
 
@@ -377,7 +377,7 @@ def fit_clients_async(
         )
         print(f"Client finshed: {finished_cid}")
         pending_fs.pop(future)
-        if len(results) >= K:
+        if len(results) >= buffer_size:
             break
 
     # print(failures)
