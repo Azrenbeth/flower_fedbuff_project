@@ -188,6 +188,20 @@ class FedAvgTraces(FedAvgM):
         log(INFO, f"Maximum completion time of clients: {max_client_completion_time}")
         self.current_virtual_clock += max_client_completion_time
 
+    def evaluate(
+        self, server_round: int, parameters: Parameters
+    ) -> Optional[Tuple[float, Dict[str, Scalar]]]:
+        """Evaluate model parameters using an evaluation function."""
+        print(f"Server round {server_round}")
+        eval_res = super().evaluate(server_round=server_round, parameters=parameters)
+        if eval_res is None:
+            metrics = {"eval_time": self.current_virtual_clock}
+            return 0.0, metrics
+        else:
+            loss, metrics = eval_res
+            metrics["eval_time"] = self.current_virtual_clock
+            return loss, metrics
+
 
 class DeterministicSampleFedAvg(FedAvgM):
     """Configurable FedAvg strategy implementation."""
