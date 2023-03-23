@@ -98,7 +98,8 @@ def train_FEMNIST(
         max_batches = None
     net.train()
     running_loss, total = 0.0, 0
-    for _ in tqdm(range(epochs)):
+    # for _ in tqdm(range(epochs)):
+    for _ in range(epochs):
         running_loss = 0.0
         total = 0
         batch_cnt = 0
@@ -136,7 +137,8 @@ def test_FEMNIST(
     correct, total, loss = 0, 0, 0.0
     net.eval()
     with torch.no_grad():
-        for data, labels in tqdm(test_loader):
+        # for data, labels in tqdm(test_loader):
+        for data, labels in test_loader:
             data, labels = data.to(device), labels.to(device)
             outputs = net(data)
 

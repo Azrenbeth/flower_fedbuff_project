@@ -34,28 +34,35 @@ class CustomClientManager(SimpleClientManager):
         server_round: int,
         min_num_clients: Optional[int] = None,
         current_virtual_clock: Optional[float] = None,
+        criterion: Criterion = None,
     ) -> List[ClientProxy]:
         """Sample a number of Flower ClientProxy instances."""
+        strategy_criterion = criterion
+
         # Block until at least num_clients are connected.
         if min_num_clients is None:
             min_num_clients = num_clients
         self.wait_for(min_num_clients)
-        # Sample clients which meet the criterion
+
+        # Sample clients which meet BOTH criteria
         cids = list(self.clients)
         # Shuffle the list of clients
         random.seed(self.seed)
         for _ in range(server_round):
             random.shuffle(cids)
-        log(INFO, f"Sampling using {self.criterion}")
+
+        log(INFO, f"Sampling using {self.criterion} and {strategy_criterion}")
         available_cids = []
+
         if self.criterion is not None:
             self.criterion.current_virtual_clock = current_virtual_clock  # type: ignore
-            while len(available_cids) < num_clients and len(cids) > 0:
-                cid = cids.pop()
-                if self.criterion.select(self.clients[cid]):
+        while len(available_cids) < num_clients and len(cids) > 0:
+            cid = cids.pop()
+            if (self.criterion is None) or (self.criterion.select(self.clients[cid])):
+                if (strategy_criterion is None) or (
+                    strategy_criterion.select(self.clients[cid])
+                ):
                     available_cids.append(cid)
-        else:
-            available_cids = random.sample(cids, num_clients)
 
         if num_clients > len(available_cids):
             log(
