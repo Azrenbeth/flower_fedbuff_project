@@ -1,3 +1,36 @@
+# FILES CHANGED IN THIS PROJECT
+
+Interesting changes:
+```
+src/py/flwr/server/app.py                                |    32 +-
+src/py/flwr/server/grpc_server/grpc_bridge.py            |     4 +-
+src/py/flwr/server/server.py                             |   167 +-
+src/py/flwr/server/strategy/__init__.py                  |     1 +
+src/py/flwr/server/strategy/fedbuff.py                    |   269 +++
+src/py/flwr/server/strategy/strategy.py                  |     8 +-
+src/py/flwr/simulation/app.py                            |     3 +-
+```
+
+Async demos (with minimal changes from originals in `examples/`):
+```
+async_demos/quickstart_pytorch/
+async_demos/simulation_pytorch/
+```
+
+Experiments for report:
+```
+# Adapted from examples/simulation_pytorch/
+FedBuffExperiments/cifar10_stuff/cifar10.ipynb
+
+# Heavily based on code written by Alexandru-Andrei Iacob 
+# and Lorenzo Sani for Lab 3:
+FedBuffExperiments/Project_experiments.ipynb
+```
+
+
+
+
+
 # Flower: A Friendly Federated Learning Framework
 
 <p align="center">
